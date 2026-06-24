@@ -6,10 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A single-page, customer-facing web store for **Costa Rica EBS (Enterprise Business Solutions)**, a Costa Rican reseller of Intcomex products. There is no build tooling, framework, package manager, or test suite — deliverables are self-contained static `.html` files (inline `<style>`/`<script>`, images either remote URLs or embedded data URIs) meant to open directly in a browser and be printable as a catalog (`@page` rules target US Letter landscape).
 
-`tienda-intcomex.html` (the deliverable from `requerimiento.txt`) is the live **customer-facing store**: a minimalist, premium single page (modern-minimal Hallmark build) with search, category/brand filters, sort, in-stock toggle, and a 706-product grid. Its 706 products are embedded as compact JSON in a `<script id="catalog">` block; the page recomputes the final price **live** in JS (`cost × 1.469`, CRC at a `FX` constant ≈ 456.5/USD), so updating cost+stock is enough to refresh prices.
+`index.html` (the deliverable from `requerimiento.txt`, originally named `tienda-intcomex.html`) is the live **customer-facing store**: a minimalist, premium single page (modern-minimal Hallmark build) with search, category/brand filters, sort, in-stock toggle, and a 706-product grid. Its 706 products are embedded as compact JSON in a `<script id="catalog">` block; the page recomputes the final price **live** in JS (`cost × 1.469`, CRC at a `FX` constant ≈ 456.5/USD), so updating cost+stock is enough to refresh prices.
 
 ### Refreshing store data
-`actualizar_datos.py` re-extracts all products from the reference catalog and rewrites the `<script id="catalog">` block in `tienda-intcomex.html`:
+`actualizar_datos.py` re-extracts all products from the reference catalog and rewrites the `<script id="catalog">` block in `index.html`:
 ```
 python actualizar_datos.py            # uses catalogo_..._con_fotos.html as source
 python actualizar_datos.py --src <newexport.html>

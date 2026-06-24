@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Actualiza los datos de productos embebidos en tienda-intcomex.html.
+Actualiza los datos de productos embebidos en index.html.
 
 Lee el catálogo de referencia (HTML exportado de Intcomex con precios finales al
 cliente), extrae los 706 productos, deriva el COSTO de Intcomex a partir del precio
 final mostrado (costo = precio_final / 1.469) y reescribe el bloque de datos
-<script id="catalog"> dentro de tienda-intcomex.html.
+<script id="catalog"> dentro de index.html.
 
 La tienda recalcula en vivo el precio final = costo * 1.30 * 1.13 (margen 30% + IVA 13%),
 asi que basta con actualizar costo y stock para que el precio mostrado quede al dia.
@@ -78,7 +78,7 @@ def main():
     here = os.path.dirname(os.path.abspath(__file__))
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", default=os.path.join(here, "catalogo_costa_rica_ebs_cliente_final_con_fotos.html"))
-    ap.add_argument("--out", default=os.path.join(here, "tienda-intcomex.html"))
+    ap.add_argument("--out", default=os.path.join(here, "index.html"))
     a = ap.parse_args()
 
     if not os.path.exists(a.src):
