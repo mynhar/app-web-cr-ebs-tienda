@@ -1,0 +1,43 @@
+Crea una pagina html, css, javascript, llamada 'tienda-intcomex.html' completa para Costa Rica EBS Enterprise Business Solutions.
+Esta pagina debe mostrar los productos disponibles para la venta y su Precio Total al Cliente.
+Es un una pagina web que muestra los productos disponibles, la cantidad en stock, y el Precio Total al Cliente.
+para [AUDIENCIA: Clientes].
+El tono debe ser minimalista.
+Usa Hallmark. No quiero nada que se vea generado por IA.
+
+Debe tomar el precio y la cantidad de productos desponible de la pagina de intcomex.
+Los precios y  la cantidad disponible deben estar siempre actualizados.
+- https://store.intcomex.com/es-XCR/Home
+- contacto@costaricaebs.com
+- @Enterprise2025
+Ejemplo: catalogo_costa_rica_ebs_cliente_final_con_fotos.html
+
+Costo de incomex USD
+Actualizar el precio y la cantidad en stock.
+Estos precios estan en la pagina de incomex.
+- https://store.intcomex.com/es-XCR/Home
+- contacto@costaricaebs.com
+- @Enterprise2025
+
+Calcular Precio final al cliente.
+Costa Rica:
+IVA = El Impuesto al Valor Agregado (IVA) en Costa Rica tiene una tarifa general del 13% sobre la mayoría de bienes y servicios.
+Calcular precio total:
+- SubTotal = precio + (precio * 30%)
+- IVA = SubTotal * (13%)
+- Precio Total al Cliente = SubTotal + IVA
+
+El cálculo correcto
+El IVA en Costa Rica se aplica sobre el precio de venta, es decir,
+sobre el precio que paga el cliente antes de impuesto, que ya incluye tu margen del 30%.
+El IVA no se calcula sobre el costo pelado, sino sobre costo + margen.
+
+Ejemplo, Con precio = 1000:
+Subtotal = 1000 * 1.30 = 1300
+IVA      = 1300 * 0.13 = 169
+Total    = 1300 + 169  = 1469
+
+Los precios y  la cantidad disponible deben estar siempre actualizados.
+
+
+
