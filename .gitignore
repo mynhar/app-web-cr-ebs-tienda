@@ -1,0 +1,15 @@
+# Credenciales y secretos — NUNCA subir al repo
+scraper/.env
+.env
+
+# Artefactos de reconocimiento/scraping (HTML y capturas locales)
+scraper/recon/
+scraper/productos.json
+scraper/storage_state.json
+scraper/logs/
+
+# Entornos de Python
+.venv/
+venv/
+__pycache__/
+*.pyc
