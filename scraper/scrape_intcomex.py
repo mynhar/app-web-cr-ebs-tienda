@@ -123,6 +123,15 @@ def extract(page, recno):
         if stock is None:
             stock = 0  # span presente sin número => sin stock local
 
+    # Producto sin precio/disponibilidad para la cuenta (descontinuado o fuera de
+    # catálogo): el portal muestra "Ingrese para ver precio y disponibilidad".
+    # Lo marcamos AGOTADO (stock 0) para no mostrar disponibilidad engañosa; el
+    # costo se deja como estaba (cost=None => no se sobrescribe).
+    if cost is None and stock is None:
+        if "Ingrese para ver precio" in (page.query_selector(".linkArea").inner_text()
+                                         if page.query_selector(".linkArea") else ""):
+            stock = 0
+
     return cost, stock
 
 
