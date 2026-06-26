@@ -39,5 +39,126 @@ Total    = 1300 + 169  = 1469
 
 Los precios y  la cantidad disponible deben estar siempre actualizados.
 
+dentro de la carpeta catalogo_imagenes_completas_v2_patch. esta el script que se uso para extraer los datos.
+ejecutes el reconocimiento
 
 
+Actualmente se hace manual. Hay que automatizarlo.
+Se hace actualmente asi:
+Para descargar un catálogo o listado de productos con precios.
+1. Ingresa a nuestro Webstore: https://store.intcomex.com e inicia sesión con tu usuario y contraseña en la opción ‘Ingresar’
+- contacto@costaricaebs.com
+- @Enterprise2025
+
+2. Ubica el listado de productos que desees, ya sea por categoría o por marca.
+3. En la parte superior del listado de productos, ubica el ítem `Lista de precio`. Allí podrás descargar el listado en los formatos EXML o CSV, según tu preferencia.
+4. Podrás abrir el archivo en el que encontrarás la categoría del producto, subcategoría, nombre, marca, precio, disponibilidad, número de parte, SKU y atributos.
+
+
+/**********************************************************************************************
+/**********************************************************************************************
+Lo que te queda hacer (una sola vez)
+
+cd c:\mi-sitio-web\app-web-cr-ebs-tienda\scraper
+
+# 1. Corrida completa inicial (si no la hiciste aún)
+.\.venv\Scripts\python.exe scrape_intcomex.py
+
+# 2. Registrar la tarea programada
+powershell -ExecutionPolicy Bypass -File .\registrar_tarea.ps1
+Y para probar que todo el flujo (scrape → push → Pages) funciona de una, podés disparar la tarea manualmente:
+
+
+Start-ScheduledTask -TaskName "EBS - Actualizar tienda Intcomex"
+Luego mirá el log más reciente en scraper\logs\ para confirmar que dijo "Publicado".
+
+Mantenimiento (mínimo)
+Única intervención recurrente: cuando la sesión de Intcomex expire (cada varias semanas), el log dirá "La sesión expiró". Corrés scrape_intcomex.py --login una vez y vuelve a quedar solo.
+
+
+/**********************************************************************************************
+/**********************************************************************************************
+Resumen de lo que quedó funcionando
+Componente	Estado
+Extracción de precios+stock desde Intcomex (706 productos)	✅ funcionando
+Manejo de productos no disponibles (→ agotados)	✅
+Escritura automática en index.html	✅
+Auto-deploy a GitHub Pages	✅
+Documentación (OPERACION.md + scraper/README.md)	✅
+Todo versionado en el repo	✅
+Lo único que te queda (una vez)
+Registrar la tarea programada para que corra solo a diario: *************************************
+
+
+cd c:\mi-sitio-web\app-web-cr-ebs-tienda\scraper
+powershell -ExecutionPolicy Bypass -File .\registrar_tarea.ps1
+De ahí en más, el sitio se actualiza solo cada día a las 06:00.
+La única intervención recurrente será renovar la sesión de Intcomex (--login) cuando el log lo indique, cada varias semanas.
+scrape_intcomex.py --login
+
+
+Quedó la automejora completa de extremo a extremo. ¿Te ayudo a registrar la tarea o con alguna otra cosa?
+
+
+
+/**********************************************************************************************
+/**********************************************************************************************
+
+
+
+
+Crea una nueva version del catalogo mejorada donde basado en el estudio de mercado, por cada producto, sacar el promedio, y poner nuestro producto un 15 menos.
+el precio del catálogo siempre sea un 15% más bajo que la competencia.
+Validar que exista al menos un 5% de margen de ganancia.
+
+
+
+
+
+/**********************************************************************************************
+Código de socio no debe mostrarce.
+eliminar el, Código de socio: @Enterprise2025
+
+/**********************************************************************************************
+Boton 'Vert ficha de Intcomex'.
+El boton apunta a intcomex. No debe ir a Intcomex.
+Deberia ir a a la ficha tecnica del fabricante del producto.
+
+
+/**********************************************************************************************
+Combiar logo.
+El logo que se debe usar es, logo-costa-rica-ebs.gif
+Al hacer clic en el logo debe ir a 'https://costaricaebs.com/'.
+Al hacer clic no debe abrir pestaña nueva. Debe usar la misma.
+Ajustar segun sea necesario.
+
+/**********************************************************************************************
+Imprimir pdf.
+Debe imprimir en pdf todos los productos del sitio.
+Debe imprimir la informacion que se muestra en la targeta de cada producto.
+Debe imprimir las imagenes tambien, a color.
+Respetar los filtros activos (categoría, marca, búsqueda) cuando los haya.
+
+
+/**********************************************************************************************
+Carrito de compras:
+Debe poder seleccionar uno o varios productos.
+Debe poder imprimir en pdf la informacion de los productos seleccionados.
+Debe agregar uno o varios productos al carrito de compras.
+Desde el carrito de compras, debe enviar la informacion de los productos seleccionados al correo de contacto, 'contacto@costaricaebs.com'.
+Desde el carrito de compras, debe enviar la informacion de los productos seleccionados al numero de whatsapp, '+506 7279 2650'.
+informacion de los productos:
+- Nomnbre
+- Descriocion
+- precio unidad
+- Cantidad
+- Precio total por producto
+- IVA
+- Al final el precio total o suma de todos los producto.
+
+
+
+/**********************************************************************************************
+/**********************************************************************************************
+Dukascopy Bank trading account API
+/**********************************************************************************************
