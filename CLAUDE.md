@@ -49,7 +49,7 @@ Key conventions in it:
 - **Product grid**: `.product-grid` is a 4-column CSS grid of `.card` elements. A card contains `.img-wrap` (with an `onerror` fallback to a branded `.img-placeholder`), then `.card-body` → `.brand`, `.title`, `.sku` (SKU + MPN), and a `.price-block` showing `.price-usd`, `.price-crc`, `.stock`, and a "Ver detalle del producto" link.
 - Prices are shown in both **USD and CRC** (`₡`); stock as `Stock: N unidades`.
 - Microsoft-partner four-square mark (`.ms-squares`) and EBS logo appear in the branding header.
-- Assets live in `img/` (logo `logoEBS-150x150.png`, backgrounds, product photos).
+- Assets live in `img/`. The live store (`index.html`) only needs `img/logo-costa-rica-ebs.gif` (header logo, links to https://costaricaebs.com/); product/background images are loaded remotely. Orphaned local assets (old `logoEBS-150x150.png`, backgrounds) were removed.
 
 ## Working notes
 
