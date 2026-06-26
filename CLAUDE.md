@@ -11,10 +11,10 @@ A single-page, customer-facing web store for **Costa Rica EBS (Enterprise Busine
 ### Refreshing store data
 `actualizar_datos.py` re-extracts all products from the reference catalog and rewrites the `<script id="catalog">` block in `index.html`:
 ```
-python actualizar_datos.py            # uses catalogo_..._con_fotos.html as source
+python actualizar_datos.py            # uses docs-referencia/catalogo_..._con_fotos.html as source
 python actualizar_datos.py --src <newexport.html>
 ```
-The reference catalog shows **final client prices**, so the script derives cost = `finalUSD / 1.469`. To reflect new Intcomex prices/stock, drop in an updated catalog export (same card markup) and re-run. Note: a static file can't live-poll Intcomex (auth-walled); "always updated" is handled by this re-export + recompute pipeline, not a live fetch.
+The reference files live in `docs-referencia/` (the catalog, PDF, pricing matrix, `requerimiento.txt`, and the image patch). The reference catalog shows **final client prices**, so the script derives cost = `finalUSD / 1.469`. To reflect new Intcomex prices/stock, drop in an updated catalog export (same card markup) and re-run. Note: a static file can't live-poll Intcomex (auth-walled); "always updated" is handled by this re-export + recompute pipeline, not a live fetch.
 
 ## Pricing formula (critical — get this exact)
 
@@ -41,7 +41,7 @@ Contact shown on the page: `contacto@costaricaebs.com`.
 
 ## Design reference
 
-`catalogo_costa_rica_ebs_cliente_final_con_fotos.html` is both the canonical **visual reference** and the **product data source** — it contains 706 products across 46 categories. Match its look and structure rather than inventing a new design, and reuse its product data rather than re-scraping Intcomex. Page structure: cover page → company page → table-of-contents page → 46 `catalog-section`s, each with a `cat-header` and a `product-grid`. Categories are named `"Major - Sub"` (e.g. `Almacenamiento - Discos de Estado Sólido Internos`).
+`docs-referencia/catalogo_costa_rica_ebs_cliente_final_con_fotos.html` is both the canonical **visual reference** and the **product data source** — it contains 706 products across 46 categories. Match its look and structure rather than inventing a new design, and reuse its product data rather than re-scraping Intcomex. Page structure: cover page → company page → table-of-contents page → 46 `catalog-section`s, each with a `cat-header` and a `product-grid`. Categories are named `"Major - Sub"` (e.g. `Almacenamiento - Discos de Estado Sólido Internos`).
 
 Key conventions in it:
 
@@ -55,5 +55,5 @@ Key conventions in it:
 
 - No commands to build/lint/test — verify by opening the HTML in a browser (and via print preview for catalog layout).
 - The reference HTML is ~2.9MB (embedded data-URI images); don't dump it whole. Use `grep`/`sed` to slice it, or **Python 3.11** (available on PATH) to parse the 706 product cards out of it into structured data.
-- `matriz_interna_costa_rica_ebs_intcomex_706_precio15.xlsx` is an internal pricing matrix (the `706` matches the product count), not part of the shipped page.
+- `docs-referencia/matriz_interna_costa_rica_ebs_intcomex_706_precio15.xlsx` is an internal pricing matrix (the `706` matches the product count), not part of the shipped page.
 - Keep everything in Spanish (the audience is Costa Rican clients).

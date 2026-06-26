@@ -157,6 +157,22 @@ informacion de los productos:
 - Al final el precio total o suma de todos los producto.
 
 
+/**********************************************************************************************
+/**********************************************************************************************
+
+el script actualizar_datos.py
+- Solo los del archivo de referencia — no consulta Intcomex en absoluto.
+los del archivo de referencia, estab dentro de la carpeta, docs-referencia
+
+Es decir: muestra exactamente los productos que estén en el archivo de referencia,
+ni más ni menos (los 706 si usás el catálogo actual). Una página estática no puede hacer live-polling a Intcomex porque está detrás de autenticación.
+
+Para reflejar precios/stock nuevos de Intcomex, el flujo es:
+
+Exportás un catálogo actualizado de Intcomex con el mismo formato de tarjetas.
+Lo dejás como --src (o reemplazás el archivo de referencia).
+Corrés python actualizar_datos.py y eso recalcula costos (precio_final / 1.469) y stock.
+Si lo que querés es que la tienda incluya todo el catálogo de Intcomex (no solo esos 706), eso requeriría un export más amplio de Intcomex como fuente — el script en sí no limita a 706, simplemente refleja cuántas tarjetas tenga el archivo que le des. ¿Querés que veamos cómo generar un export más completo?
 
 /**********************************************************************************************
 /**********************************************************************************************

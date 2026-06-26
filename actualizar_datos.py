@@ -77,7 +77,7 @@ def build_data(products):
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     ap = argparse.ArgumentParser()
-    ap.add_argument("--src", default=os.path.join(here, "catalogo_costa_rica_ebs_cliente_final_con_fotos.html"))
+    ap.add_argument("--src", default=os.path.join(here, "docs-referencia", "catalogo_costa_rica_ebs_cliente_final_con_fotos.html"))
     ap.add_argument("--out", default=os.path.join(here, "index.html"))
     a = ap.parse_args()
 
