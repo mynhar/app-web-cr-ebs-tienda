@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A single-page, customer-facing web store for **Costa Rica EBS (Enterprise Business Solutions)**, a Costa Rican reseller of Intcomex products. There is no build tooling, framework, package manager, or test suite — deliverables are self-contained static `.html` files (inline `<style>`/`<script>`, images either remote URLs or embedded data URIs) meant to open directly in a browser and be printable as a catalog (`@page` rules target US Letter landscape).
 
-`index.html` (the deliverable from `requerimiento.txt`, originally named `tienda-intcomex.html`) is the live **customer-facing store**: a minimalist, premium single page (modern-minimal Hallmark build) with search, category/brand filters, sort, in-stock toggle, and a 706-product grid. Its 706 products are embedded as compact JSON in a `<script id="catalog">` block; the page recomputes the final price **live** in JS (`cost × 1.469`, CRC at a `FX` constant ≈ 456.5/USD), so updating cost+stock is enough to refresh prices.
+`index.html` (the deliverable from `requerimiento.txt`, originally named `tienda-intcomex.html`) is the live **customer-facing store**: a minimalist, premium single page (modern-minimal Hallmark build) with search, category/brand filters, sort, in-stock toggle, and a 706-product grid. Its 706 products are embedded as compact JSON in a `<script id="catalog">` block; the page recomputes the final price **live** in JS (`cost × 1.469`, CRC at a `FX` constant = 456.0/USD, Intcomex's rate), so updating cost+stock is enough to refresh prices.
 
 ### Refreshing store data
 `actualizar_datos.py` re-extracts all products from the reference catalog and rewrites the `<script id="catalog">` block in `index.html`:
@@ -14,21 +14,26 @@ A single-page, customer-facing web store for **Costa Rica EBS (Enterprise Busine
 python actualizar_datos.py            # uses docs-referencia/catalogo_..._con_fotos.html as source
 python actualizar_datos.py --src <newexport.html>
 ```
-The reference files live in `docs-referencia/` (the catalog, PDF, pricing matrix, `requerimiento.txt`, and the image patch). The reference catalog shows **final client prices**, so the script derives cost = `finalUSD / 1.469`. To reflect new Intcomex prices/stock, drop in an updated catalog export (same card markup) and re-run. Note: a static file can't live-poll Intcomex (auth-walled); "always updated" is handled by this re-export + recompute pipeline, not a live fetch.
+The reference files live in `docs-referencia/`. **The real Intcomex cost per SKU (no IVA, no margin) is the `Costo Intcomex USD` column of the internal matrix `matriz_interna_..._706_precio15.xlsx` (sheet `Productos`)** — that is the price source. The HTML catalog (`catalogo_..._cliente_final_...`) supplies the structure (categories, titles, images, stock, links), matched to the matrix by SKU. The script reads cost from the matrix (needs `openpyxl`); if the matrix/openpyxl is missing it falls back to `catalogo_price / 1.15`. The store then applies margin + IVA (`cost × 1.469`). To reflect new prices/stock, drop in an updated matrix export and re-run. Note: a static file can't live-poll Intcomex (auth-walled); "always updated" is handled by this re-export + recompute pipeline, not a live fetch.
+
+**Watch out — the HTML catalog price is NOT the cost.** Its `price-usd` is `Precio EBS +15%` (`cost × 1.15`, an old scheme). Verified across all 706 SKUs: `catalog_price / matrix_cost = 1.15`. Using the catalog price as cost (or dividing it by the store's `1.469`) silently strips the margin — both bugs that already happened. Always source cost from the matrix.
 
 ## Pricing formula (critical — get this exact)
 
-The Intcomex cost is in **USD**. The final customer price for Costa Rica is computed as:
+The Intcomex cost is in **USD**. The IVA that EBS pays the supplier is **crédito fiscal** (recoverable — not a real cost), so the cost base used to set the price is the **bare cost**, with margin then IVA on top:
 
 ```
-SubTotal = cost × 1.30          # 30% margin
-IVA      = SubTotal × 0.13      # 13% IVA, applied on cost+margin — NOT on bare cost
+SubTotal = cost × 1.30          # 30% margin (no IVA yet)
+IVA      = SubTotal × 0.13      # 13% IVA charged to the client (débito fiscal)
 Total    = SubTotal + IVA       # = cost × 1.30 × 1.13 = cost × 1.469
 ```
 
-Example: cost 1000 → SubTotal 1300 → IVA 169 → **Total 1469**. The IVA is deliberately applied to `cost + margin`, not to the bare cost; do not "simplify" this.
+Example: cost 1000 → SubTotal 1300 → IVA 169 → **Total 1469**. The IVA is applied to `cost + margin`, not to the bare cost; do not "simplify" this. The store recompute lives in `index.html` as `FACTOR = 1.30 × 1.13 = 1.469`; updating cost+stock is enough to refresh prices.
 
-Note: the prices already shown in the reference catalog (`..._cliente_final_...`) are **final client prices** (`cost × 1.469`), not raw Intcomex cost. To recover cost from them, divide by `1.469`.
+Note: the `cost` is the real Intcomex price from the matrix (`Costo Intcomex USD`), which is **without IVA and without margin** (Intcomex is wholesale; that's what EBS pays). The final client price `cost × 1.469` is computed live in the store. Do **not** use the HTML catalog's displayed price as cost — it already carries an old `× 1.15` markup.
+
+### Exchange rate (CRC)
+Each price is shown in **USD and CRC**, using **Intcomex's own exchange rate** (`FX` in `index.html`, currently **456.0 ₡/US$**). The rate is not invented: `actualizar_datos.py` derives it from the reference catalog by comparing each product's USD and CRC prices (the CRC are rounded to hundreds, so it picks the `FX` that best reproduces them) and injects it into the `var FX` constant and the footer note. Drop in a fresh Intcomex export and re-run to refresh the rate along with prices/stock.
 
 ## Data source
 
@@ -55,5 +60,5 @@ Key conventions in it:
 
 - No commands to build/lint/test — verify by opening the HTML in a browser (and via print preview for catalog layout).
 - The reference HTML is ~2.9MB (embedded data-URI images); don't dump it whole. Use `grep`/`sed` to slice it, or **Python 3.11** (available on PATH) to parse the 706 product cards out of it into structured data.
-- `docs-referencia/matriz_interna_costa_rica_ebs_intcomex_706_precio15.xlsx` is an internal pricing matrix (the `706` matches the product count), not part of the shipped page.
+- `docs-referencia/matriz_interna_costa_rica_ebs_intcomex_706_precio15.xlsx` is the **cost source**: sheet `Productos`, column `Costo Intcomex USD` (real Intcomex cost per SKU). It also has `Precio EBS USD +15%` (the old scheme that leaked into the HTML catalog) and stock/category/URL columns. The `706` matches the product count. `actualizar_datos.py` reads it via `openpyxl` (auto-installed if missing).
 - Keep everything in Spanish (the audience is Costa Rican clients).

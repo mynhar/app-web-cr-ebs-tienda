@@ -23,9 +23,13 @@ Calcular Precio final al cliente.
 Costa Rica:
 IVA = El Impuesto al Valor Agregado (IVA) en Costa Rica tiene una tarifa general del 13% sobre la mayoría de bienes y servicios.
 Calcular precio total:
-- SubTotal = precio + (precio * 30%)
+- SubTotalIntcomex = precioIntcomex + (precioIntcomex * 13%)
+- SubTotal = SubTotalIntcomex + (SubTotalIntcomex * 13%)
 - IVA = SubTotal * (13%)
 - Precio Total al Cliente = SubTotal + IVA
+
+falta el 13% de IntComex *******************************************************************
+
 
 El cálculo correcto
 El IVA en Costa Rica se aplica sobre el precio de venta, es decir,
@@ -103,10 +107,6 @@ Quedó la automejora completa de extremo a extremo. ¿Te ayudo a registrar la ta
 
 /**********************************************************************************************
 /**********************************************************************************************
-
-
-
-
 Crea una nueva version del catalogo mejorada donde basado en el estudio de mercado, por cada producto, sacar el promedio, y poner nuestro producto un 15 menos.
 el precio del catálogo siempre sea un 15% más bajo que la competencia.
 Validar que exista al menos un 5% de margen de ganancia.
@@ -178,3 +178,152 @@ Si lo que querés es que la tienda incluya todo el catálogo de Intcomex (no sol
 /**********************************************************************************************
 Dukascopy Bank trading account API
 /**********************************************************************************************
+
+
+/**********************************************************************************************
+/**********************************************************************************************
+Bonton del Carrito debe estar a la par del boton Imprimir PDF.
+- No debe ser flotante.
+- Debe tener la misma altura que los demas botones.
+
+Asistente virtual.
+Agregar el numero de Whatsapp:
+- Agregar boton Whatsapp flotante. Debe flotar igual que flotaba el boton Carrito.
+- Costa Rica Enterprise Business Solutions, +506 7117 1975
+
+falta el 13% de IntComex *******************************************************************
+
+Calcular precio total:
+- SubTotalIntcomex = precioIntcomex + (precioIntcomex * 13%)
+- IVA = SubTotalIntcomex * (13%)
+- Precio Total al Cliente = SubTotalIntcomex + IVA + (SubTotalIntcomex*0.3)
+
+
+Mostrar todos los productos de intcomex
+Agregar favicon.
+- Usar: logo-costa-rica-ebs.gif
+
+
+/**********************************************************************************************
+/**********************************************************************************************
+Costa Rica:
+Revisar como Calcular Precio final al cliente. Debe ser.
+IVA = El Impuesto al Valor Agregado (IVA) en Costa Rica tiene una tarifa general del 13% sobre la mayoría de bienes y servicios.
+Precio: precio en Intcomex o precio según la pagina de Intcomex.
+SubTotal = precio + (precio * 13%)
+IVA = SubTotal * 13%
+Precio final al cliente = SubTotal + IVA + (SubTotal * 30%)
+
+
+/**********************************************************************************************
+456.0
+/**********************************************************************************************
+Costa Rica:
+Revisar como Calcular Precio final al cliente.
+Revisar los precios y el calculo del precio al cliente.
+- El precio del producto en Intcomex esta en dolares.
+- El precio de cada producto se debe mostrar en dolares y en colones.
+- Debe tomar el tipo de cambio de Intcomex.
+
+Precio base del proveedor      = 1000
+IVA que pagás al proveedor      =  130   ← crédito fiscal (lo recuperás, NO es costo)
+Tu costo real para fijar precio = 1000
+
+Precio de venta con margen 30%  = 1000 * 1.30 = 1300   ← SubTotal sin IVA
+IVA que cobrás al cliente       = 1300 * 0.13 =  169   ← débito fiscal
+Precio Total al Cliente         = 1469
+
+
+Revisar en el carrito. el calculo de:
+- Subtotal (sin IVA)
+- IVA 13%
+- Total
+
+Agregue al carrito un producto con precio $0.95
+- El tipo de cambio en intcomex es 456 colones.
+- Pero el total en colones segun ese tipo de cambio muestra 400. Esto es incorrecto
+Ejemplo:
+- Subtotal (sin IVA): 0,84 * 456 = 383,04
+- IVA 13%           : 0,11 * 456 = 50,16
+- Total             : 0,95 * 456 = 433,2
+
+
+
+Revisar El calculo del precio total al clinete.
+Tengo un producto con precio $0.83.
+La formula debe funcionar asi:
+Precio base (costo)        = 0.83
+SubTotal = 0.83 * 1.30     = 1.079    ← precio de venta con margen 30%, SIN IVA
+IVA      = 1.079 * 0.13    = 0.14027  ← débito fiscal (IVA al cliente)
+Precio Total al Cliente    = 1.079 + 0.14027 = 1.21927
+El precio total al cliente es $1.22 (redondeando a centavos).
+
+
+/**********************************************************************************************
+/**********************************************************************************************
+Revisar El calculo del precio total al clinete.
+Tengo un producto con precio $0.83.
+La formula debe funcionar asi:
+Precio base (costo)        = 0.83
+SubTotal = 0.83 * 1.30     = 1.079    ← precio de venta con margen 30%, SIN IVA
+IVA      = 1.079 * 0.13    = 0.14027  ← débito fiscal (IVA al cliente)
+Precio Total al Cliente    = 1.079 + 0.14027 = 1.21927
+El precio total al cliente es $1.22 (redondeando a centavos).
+
+Necesito calcular el precio final al cliente de un producto en Costa Rica.
+
+Reglas del cálculo:
+- IVA en Costa Rica = 13%.
+- Margen de ganancia = 30%.
+- El IVA que me cobra mi proveedor NO es un costo: es crédito fiscal que recupero,
+  así que se IGNORA para fijar el precio.
+- El margen se aplica sobre el costo base (sin IVA del proveedor).
+- El IVA al cliente se aplica UNA sola vez, de último, sobre el precio con margen.
+
+Orden correcto: costo → margen → IVA.
+
+Fórmula:
+  SubTotal (venta sin IVA) = precio_base * 1.30
+  IVA al cliente           = SubTotal * 0.13
+  Precio Total al Cliente  = SubTotal * 1.13 = precio_base * 1.469
+
+Datos:
+  precio_base = 0.83
+
+Devuélveme:
+1. El desglose paso a paso (costo, margen, subtotal, IVA, total).
+2. El precio total al cliente redondeado a 2 decimales.
+3. El IVA que debo remitir a Hacienda (débito − crédito), asumiendo que
+   pagué 13% de IVA al proveedor sobre el precio base.
+
+
+Además, genera una función en TypeScript llamada calPrecioCliente(precioBase) que reciba el costo base y retorne un objeto
+con: subtotal, iva, totalCliente y ivaARemitir. Incluye comentarios.
+
+Tomar en cuenta siempre el tipo de cambio segun Intcomex.
+Los montos en colones no deben ser redondeados, y se deben mostrar por lo menos dos decimales.
+
+
+/**********************************************************************************************
+/**********************************************************************************************
+Actualmente solo se muestra 706 productos de Intcomex.
+Debe mostrar todo los productos de Intcomex.
+Debe actualizar la informacion de todos los productos, todos los dias a las 24:00.
+
+
+/**********************************************************************************************
+/**********************************************************************************************
+Explicar:
+Si el precio de un producto en Intcomex es 0.83
+cual deberia ser el precio al cliente?
+
+
+
+
+
+
+
+
+
+
+
