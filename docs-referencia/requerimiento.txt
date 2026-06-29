@@ -308,14 +308,111 @@ Los montos en colones no deben ser redondeados, y se deben mostrar por lo menos 
 /**********************************************************************************************
 Actualmente solo se muestra 706 productos de Intcomex.
 Debe mostrar todo los productos de Intcomex.
-Debe actualizar la informacion de todos los productos, todos los dias a las 24:00.
+Debe actualizar la informacion de todos los productos desde Intcomex, todos los dias a las 24:00.
+- precio.
+- categorías.
+- imágenes.
+- stock.
+- enlaces.
+- tipo de cambio.
+
+Proponer la mejor forma de mantener los datos actualizados.
+
+
+Entro a la tienda, solo con usuario y contraseña
+https://store.intcomex.com/es-XCR/Products/ByCategory/cpt.notebook?r=True
 
 
 /**********************************************************************************************
 /**********************************************************************************************
-Explicar:
-Si el precio de un producto en Intcomex es 0.83
-cual deberia ser el precio al cliente?
+Para actualizar todos los productos desde Intcomex.
+El crawl completo es el mismo comando pero sin --limit-cats (así recorre las 130 categorías, no solo 2):
+
+
+cd c:\mi-sitio-web\app-web-cr-ebs-tienda\scraper
+.\.venv\Scripts\python.exe scrape_intcomex.py --crawl
+Eso recorre todas las categorías y reescribe index.html con el catálogo completo de Intcomex (precio, stock, categoría, imagen, enlace).
+
+⚠️ Dos cosas a tener en cuenta:
+
+Tarda bastante (son 130 categorías × varias páginas cada una).
+- Dejalo correr; va imprimiendo [N/130] categoria … acumulado: X para que veas el avance.
+
+Si querés, antes confirmá con la prueba de 2 categorías (--limit-cats 2) que ahora sí trae decenas de productos con stock.
+Si eso se ve bien, lanzá el completo.
+Cuando termine, va a decir algo como "index.html actualizado con TODO el catálogo: N productos".
+Ahí abrís index.html para verlo, y ya queda listo para que la tarea diaria de medianoche lo haga solo.
+
+
+/**********************************************************************************************
+/**********************************************************************************************
+Lo que falta para cerrar
+Abrí index.html en el navegador y revisá: ¿se ven los 2.032 productos con precio y stock? ¿Los filtros de categoría andan?
+
+Programar la tarea diaria a medianoche (una sola vez):
+
+
+cd c:\mi-sitio-web\app-web-cr-ebs-tienda\scraper
+powershell -ExecutionPolicy Bypass -File .\registrar_tarea.ps1
+Eso registra la tarea "EBS - Actualizar tienda Intcomex" que corre --crawl todos los días a las 00:00, y publica los cambios a GitHub Pages.
+
+Subir lo de hoy a GitHub (para que se publique ya):
+
+
+cd c:\mi-sitio-web\app-web-cr-ebs-tienda
+git add index.html scraper/
+git commit -m "Catálogo completo Intcomex (2032 productos) + scraper automático"
+git push
+
+
+/**********************************************************************************************
+/**********************************************************************************************
+Para cerrar todo el proyecto
+Programar la tarea diaria (una vez):
+
+powershell -ExecutionPolicy Bypass -File .\registrar_tarea.ps1
+Subir a GitHub para publicar:
+
+cd c:\mi-sitio-web\app-web-cr-ebs-tienda
+git add index.html scraper/
+git commit -m "Catálogo Intcomex completo + scraper diario"
+git push
+
+
+
+/**********************************************************************************************
+/**********************************************************************************************
+Para actualizar todos los productos:
+.\.venv\Scripts\python.exe scrape_intcomex.py --crawl
+
+cd c:\mi-sitio-web\app-web-cr-ebs-tienda\scraper
+.\.venv\Scripts\python.exe scrape_intcomex.py --crawl
+
+
+
+/**********************************************************************************************
+/**********************************************************************************************
+Mejorado el diagnóstico. Ahora hacé el re-login (esto es lo que arregla) y volvé a probar:
+
+
+cd c:\mi-sitio-web\app-web-cr-ebs-tienda\scraper
+
+# 1) LOGIN FRESCO — mirá en la ventana que entre y diga "Bienvenido ..."
+.\.venv\Scripts\python.exe scrape_intcomex.py --auto-login --headful
+
+# 2) Probar de nuevo
+.\.venv\Scripts\python.exe scrape_intcomex.py --probe-cat cac.cable
+Mirá la segunda línea del probe:
+
+Si dice precios: 34 (o > 0) → sesión restaurada ✅ → corré el --crawl completo.
+Si dice 'Ingrese para ver precio': 44 | parseados: 0 y precios: 0 → la sesión sigue sin precios; ahí el robot mismo te avisa >> La sesión NO tiene acceso a precios.
+Pegame esas dos líneas del probe después del re-login. Mi apuesta: con el login fresco vuelven los precios. 🤞
+
+Si al re-loguear con --auto-login no alcanza (raro), probá el login manual una vez, que es más confiable:
+
+
+.\.venv\Scripts\python.exe scrape_intcomex.py --login
+(se abre el navegador, entrás vos a mano, cerrás el inspector, y guarda la sesión).
 
 
 

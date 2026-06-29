@@ -30,6 +30,7 @@ import sys
 import json
 import time
 import argparse
+import html as htmlmod
 from dotenv import load_dotenv
 
 try:
@@ -74,6 +75,21 @@ def write_catalog(html, data, path=INDEX):
         sys.exit("No se pudo reescribir el bloque <script id=\"catalog\">.")
     open(path, "w", encoding="utf-8").write(new_html)
     return len(blob.encode("utf-8"))
+
+
+def inject_fx(fx, path=INDEX):
+    """Escribe el tipo de cambio de Intcomex en la constante FX y en la nota del pie."""
+    if not fx:
+        return
+    html = open(path, encoding="utf-8").read()
+    html, n = re.subn(r'(var FX = )[0-9.]+(;)', lambda m: m.group(1) + str(fx) + m.group(2),
+                      html, count=1)
+    html = re.sub(r'(<span id="fxnote">)[^<]*(</span>)',
+                  lambda m: m.group(1) + ("%.2f" % fx).replace(".", ",") + m.group(2),
+                  html, count=1)
+    open(path, "w", encoding="utf-8").write(html)
+    if n != 1:
+        print("Aviso: no se encontró 'var FX =' en index.html para actualizar.")
 
 
 # --------------------------------------------------------------------------- #
@@ -239,19 +255,307 @@ def do_refresh(limit=None, headful=False, delay=0.6):
               ", ".join(f"{rc}/{sk}" for rc, sk in failed[:5]))
 
 
+# --------------------------------------------------------------------------- #
+#  Login automático (usuario+contraseña). En tu PC no hay captcha; si apareciera,
+#  el robot lo detecta y te manda a hacer login manual (--login) una vez.
+# --------------------------------------------------------------------------- #
+LOGIN_URL = BASE + "/es-XCR/Account/Login"
+IMG_BASE = BASE + "/images/products/"
+FX = 456.0   # ₡ por US$ por defecto; se sobrescribe con el TC leído de Intcomex (scrape_fx)
+
+
+def _logged_in(page):
+    """¿La sesión quedó iniciada? Señales claras de la página privada (saludo / salir).
+    OJO: NO mirar el captcha del chat en vivo (está oculto en todas las páginas)."""
+    html = page.content()
+    return bool(re.search(r"/Initial/Logout|Cerrar sesi|Bienvenido\b", html))
+
+
+def scrape_fx(page):
+    """Tipo de cambio del encabezado (lblTicker): 'US$1 = ₡459,01' -> 459.01.
+    Toma el número DESPUÉS del '=' (no el '1' de 'US$1')."""
+    m = re.search(r'id="lblTicker"[^>]*>(.*?)</span>', page.content(), re.S)
+    if not m:
+        return None
+    n = re.search(r"=\s*\D*([0-9][0-9.,]*)", m.group(1))
+    if not n:
+        return None
+    raw = n.group(1).replace(".", "").replace(",", ".")
+    try:
+        return round(float(raw), 4)
+    except ValueError:
+        return None
+
+
+def auto_login(p, headful=False):
+    """Inicia sesión escribiendo usuario/contraseña del .env y guarda la sesión."""
+    user, pw, code = os.getenv("INTCOMEX_USER"), os.getenv("INTCOMEX_PASS"), os.getenv("INTCOMEX_CODE")
+    if not user or not pw:
+        sys.exit("Faltan INTCOMEX_USER / INTCOMEX_PASS en scraper/.env")
+    browser = p.chromium.launch(headless=not headful)
+    ctx = browser.new_context(locale="es-CR", viewport={"width": 1366, "height": 900})
+    page = ctx.new_page()
+    page.goto(LOGIN_URL, wait_until="domcontentloaded", timeout=60000)
+    page.wait_for_timeout(1200)
+
+    def fill_first(selectors, value):
+        for sel in selectors:
+            el = page.query_selector(sel)
+            if el and el.is_visible():
+                el.fill(value)
+                return True
+        return False
+
+    fill_first(["input[type='email']", "input[name*='User' i]", "input[name*='Email' i]",
+                "input[name*='Usuario' i]", "input[type='text']"], user)
+    fill_first(["input[type='password']", "input[name*='Pass' i]"], pw)
+    if code:
+        fill_first(["input[name*='Code' i]", "input[name*='Codigo' i]", "input[name*='Partner' i]"], code)
+
+    btn = page.query_selector("button[type='submit'], input[type='submit'], "
+                              "button:has-text('Ingresar'), button:has-text('Iniciar')")
+    if btn:
+        btn.click()
+    else:
+        page.keyboard.press("Enter")
+    try:
+        page.wait_for_load_state("networkidle", timeout=60000)
+    except Exception:
+        pass
+    page.wait_for_timeout(1500)
+
+    if not _logged_in(page):
+        os.makedirs(RECON, exist_ok=True)
+        page.screenshot(path=os.path.join(RECON, "login_fallo.png"), full_page=True)
+        open(os.path.join(RECON, "login_fallo.html"), "w", encoding="utf-8").write(page.content())
+        browser.close()
+        sys.exit("No se pudo iniciar sesión automáticamente. Revisá usuario/contraseña en .env "
+                 "(o usá --login). Guardé recon/login_fallo.* para revisar.")
+    ctx.storage_state(path=STATE)
+    page.close()
+    return browser, ctx
+
+
+def get_context(p, headful=False):
+    """Usa la sesión guardada si sigue válida; si no, hace login automático."""
+    if os.path.exists(STATE):
+        browser = p.chromium.launch(headless=not headful)
+        ctx = browser.new_context(storage_state=STATE, locale="es-CR",
+                                  viewport={"width": 1366, "height": 900})
+        page = ctx.new_page()
+        page.goto(HOME, wait_until="domcontentloaded", timeout=60000)
+        if not is_logged_out(page):
+            page.close()
+            return browser, ctx
+        page.close(); browser.close()   # sesión expirada → re-login
+    return auto_login(p, headful=headful)
+
+
+# --------------------------------------------------------------------------- #
+#  Recorrer TODO el catálogo (todas las categorías, todas las páginas)
+# --------------------------------------------------------------------------- #
+def discover_categories(page):
+    """Códigos y nombres de categoría desde los enlaces del menú de la tienda."""
+    page.goto(HOME, wait_until="domcontentloaded", timeout=60000)
+    page.wait_for_timeout(1500)
+    html = page.content()
+    # categorías MAYORES: /Products/Category/cac?... title="Accesorios para Computadores"
+    majors = {}
+    for m in re.finditer(r'/Products/Category/([\w\-]+)\?[^"]*"\s+title="([^"]*)"', html):
+        majors.setdefault(m.group(1), htmlmod.unescape(m.group(2)).strip())
+    # SUBcategorías (hojas): /Products/ByCategory/cac.cable?... title="Cables"
+    # Nombre final "Mayor - Sub"; el mayor sale del prefijo del código (cac.cable -> cac).
+    cats = {}
+    for m in re.finditer(r'/Products/ByCategory/([\w.\-]+)\?[^"]*"\s+title="([^"]*)"', html):
+        code = m.group(1)
+        sub = htmlmod.unescape(m.group(2)).strip()
+        major = majors.get(code.split(".")[0], "")
+        cats.setdefault(code, f"{major} - {sub}" if major else sub)
+    for code in re.findall(r'/Products/ByCategory/([\w.\-]+)', html):
+        cats.setdefault(code, code)
+    return cats
+
+
+def parse_listing(html):
+    """Productos de la grilla de una categoría. Cada tarjeta es un bloque
+    <div id="row_<recno>" ... data-recno="<recno>"> con data-sku, marca, precio y stock.
+    Al cortar por ese bloque se ignora el carrusel lateral de 'Recientemente Vistos'."""
+    out = []
+    blocks = re.split(r'<div id="row_(\d+)"', html)  # [pre, recno, seg, recno, seg, ...]
+    for i in range(1, len(blocks), 2):
+        recno, seg = blocks[i], blocks[i + 1]
+        price = re.search(r'font-price"><b>\$\s*([0-9.,]+)</b>', seg)
+        sku = re.search(r'data-sku="([^"]*)"', seg)
+        if not (price and sku):
+            continue
+        name = re.search(r'data-productname="([^"]*)"', seg) or re.search(r'class="product-name">\s*([^<]+?)\s*<', seg)
+        brand = re.search(r'class="marca">\s*([^<]+?)\s*<', seg) or re.search(r'data-brand="([^"]*)"', seg)
+        mpn = re.search(r'data-mpn="([^"]*)"', seg)
+        img = re.search(r'<img[^>]+src=["\']([^"\']+)["\']', seg)
+        # stock del local principal: span js-product-item-stock-<recno> -> "17 en La Uruca."
+        stk = re.search(r'js-product-item-stock-%s"[^>]*>\s*([0-9.,]+)\s+en' % re.escape(recno), seg)
+        out.append({
+            "recno": recno,
+            "sku": sku.group(1).strip(),
+            "title": htmlmod.unescape(name.group(1)).strip() if name else "",
+            "brand": htmlmod.unescape(brand.group(1)).strip() if brand else "",
+            "mpn": mpn.group(1).strip() if mpn else "",
+            "cost": float(price.group(1).replace(",", "")),
+            "img": htmlmod.unescape(img.group(1).strip()) if img else "",
+            "stock": int(stk.group(1).replace(",", "")) if stk else None,
+        })
+    return out
+
+
+def _img_suffix(img):
+    if img.startswith("/images/products/"):
+        return img[len("/images/products/"):]
+    if img.startswith("http"):
+        return "|" + img
+    if img.startswith("/"):
+        return "|" + BASE + img
+    return "|" + img if img else ""
+
+
+def build_catalog(products):
+    """Arma {cats, brands, rows} en el mismo formato que consume index.html."""
+    cats, brands = [], []
+    def idx(lst, v):
+        if v not in lst:
+            lst.append(v)
+        return lst.index(v)
+    rows = []
+    for c in sorted(products, key=lambda x: (x.get("catname", ""), x.get("title", ""))):
+        rows.append([
+            idx(cats, c.get("catname", "")), idx(brands, c.get("brand", "")),
+            c.get("title", ""), c.get("sku", ""), c.get("mpn", ""),
+            c.get("cost", 0), c.get("stock") if c.get("stock") is not None else 0,
+            _img_suffix(c.get("img", "")), c.get("recno", ""),
+        ])
+    return {"cats": cats, "brands": brands, "rows": rows}
+
+
+def do_probe_cat(code, headful=True):
+    """Vuelca 1 página de una categoría para validar estructura (stock, paginación)."""
+    os.makedirs(RECON, exist_ok=True)
+    with sync_playwright() as p:
+        browser, ctx = get_context(p, headful=headful)
+        page = ctx.new_page()
+        url = "%s/es-XCR/Products/ByCategory/%s?r=True&p=1" % (BASE, code)
+        print("Abriendo:", url)
+        page.goto(url, wait_until="domcontentloaded", timeout=60000)
+        try:
+            page.wait_for_selector(".font-price, [data-productsku]", timeout=10000)
+        except Exception:
+            pass
+        page.wait_for_timeout(800)
+        content = page.content()
+        open(os.path.join(RECON, f"cat_{code}.html"), "w", encoding="utf-8").write(content)
+        page.screenshot(path=os.path.join(RECON, f"cat_{code}.png"), full_page=True)
+        cards = parse_listing(content)
+
+        # --- diagnóstico (números, sin exponer costos) ---
+        n_detail = len(re.findall(r"/Product/[Dd]etail/\d+", content))
+        n_price = len(re.findall(r'font-price"><b>\$', content))
+        n_sku = len(re.findall(r"Intcomex SKU:", content))
+        con_stock = sum(1 for c in cards if c["stock"] is not None)
+        n_grid = len(re.findall(r'<div id="row_\d+"', content))
+        n_ingrese = len(re.findall(r"Ingrese para ver precio", content))
+        print(f"Tarjetas de grilla (id=row_): {n_grid} | enlaces /detail: {n_detail} | precios: {n_price}")
+        print(f"'Ingrese para ver precio': {n_ingrese} | parseados: {len(cards)} | con stock: {con_stock}")
+        if n_ingrese and not n_price:
+            print(">> La sesión NO tiene acceso a precios. Re-logueá: scrape_intcomex.py --auto-login")
+        if cards:
+            c = cards[0]   # sin imprimir el costo (dato sensible)
+            print("Ejemplo -> SKU:", c["sku"], "| marca:", c["brand"], "| stock:", c["stock"])
+
+        # Muestra CHICA y segura: recorta alrededor de la 1ª tarjeta de la grilla real.
+        g = re.search(r'<div id="row_\d+"', content)
+        pos = g.start() if g else 0
+        zona = content[max(0, pos - 200):pos + 4500]
+        zona = re.sub(r"<script[\s\S]*?</script>", "", zona)          # quita scripts
+        zona = re.sub(r"\$\s*[0-9][0-9.,]*", "$ XX", zona)            # oculta costos
+        zona = re.sub(r"\s+", " ", zona)
+        open(os.path.join(RECON, f"cat_{code}_muestra.txt"), "w", encoding="utf-8").write(zona)
+        print(f"Muestra para compartir: scraper/recon/cat_{code}_muestra.txt")
+        browser.close()
+
+
+def do_crawl(headful=False, delay=0.4, max_pages=300, limit_cats=None):
+    global FX
+    with sync_playwright() as p:
+        browser, ctx = get_context(p, headful=headful)
+        page = ctx.new_page()
+        cats = discover_categories(page)
+        fx = scrape_fx(page)            # tipo de cambio de Intcomex, en vivo
+        if fx:
+            FX = fx
+        codes = list(cats)[:limit_cats] if limit_cats else list(cats)
+        print(f"Categorías encontradas: {len(cats)}  | a recorrer: {len(codes)}  | TC Intcomex: {FX}")
+        prods = {}
+        for ci, code in enumerate(codes, 1):
+            seen_cat = set()    # SKUs ya vistos en ESTA categoría
+            for pg in range(1, max_pages + 1):
+                url = "%s/es-XCR/Products/ByCategory/%s?r=True&p=%d" % (BASE, code, pg)
+                page.goto(url, wait_until="domcontentloaded", timeout=45000)
+                if is_logged_out(page):
+                    sys.exit("La sesión expiró durante el recorrido. Volvé a correr (re-login automático).")
+                try:
+                    page.wait_for_selector(".font-price, [data-productsku]", timeout=8000)
+                except Exception:
+                    pass
+                page.wait_for_timeout(300)
+                cards = parse_listing(page.content())
+                # Si la página no trae SKUs nuevos (vacía o Intcomex repitió la pág. 1),
+                # llegamos al final de la categoría.
+                nuevos = [c for c in cards if c["sku"] not in seen_cat]
+                if not nuevos:
+                    break
+                for c in nuevos:
+                    seen_cat.add(c["sku"])
+                    c["catname"] = cats.get(code) or code
+                    prods.setdefault(c["sku"], c)
+                time.sleep(delay)
+            print(f"  [{ci}/{len(codes)}] {code:<24} pág {pg}  acumulado: {len(prods)}")
+        browser.close()
+
+    if not prods:
+        sys.exit("No se obtuvo ningún producto. Revisá la sesión / categorías.")
+    data = build_catalog(list(prods.values()))
+    html, _ = read_catalog()
+    size = write_catalog(html, data)
+    inject_fx(fx)   # actualiza el TC en la tienda solo si se leyó (inject_fx ignora None)
+    json.dump(list(prods.values()), open(RESULTS, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    print(f"\nindex.html actualizado con TODO el catálogo: {len(data['rows'])} productos "
+          f"({size} bytes de datos).  TC inyectado: {FX}")
+
+
 def main():
-    ap = argparse.ArgumentParser(description="Refresca precio/stock de la tienda desde Intcomex.")
+    ap = argparse.ArgumentParser(description="Refresca/recorre la tienda desde Intcomex.")
     ap.add_argument("--login", action="store_true", help="Login manual y guardar sesión")
+    ap.add_argument("--auto-login", action="store_true", help="Login automático (usuario/contraseña del .env)")
     ap.add_argument("--probe", metavar="RECNO", help="Volcar 1 página de detalle y validar selectores")
+    ap.add_argument("--probe-cat", metavar="CODIGO", help="Volcar 1 página de una categoría (ej. cpt.notebook)")
+    ap.add_argument("--crawl", action="store_true", help="Recorrer TODO el catálogo (todas las categorías)")
     ap.add_argument("--limit", type=int, help="Refrescar solo los primeros N productos (prueba)")
+    ap.add_argument("--limit-cats", type=int, help="Recorrer solo las primeras N categorías (prueba de --crawl)")
     ap.add_argument("--headful", action="store_true", help="Mostrar el navegador")
-    ap.add_argument("--delay", type=float, default=0.6, help="Segundos de espera entre productos")
+    ap.add_argument("--delay", type=float, default=0.6, help="Segundos de espera entre páginas/productos")
     a = ap.parse_args()
 
     if a.login:
         do_login()
+    elif a.auto_login:
+        with sync_playwright() as p:
+            b, _ = auto_login(p, headful=a.headful)
+            print("Login automático OK. Sesión guardada en:", STATE)
+            b.close()
     elif a.probe:
         do_probe(a.probe)
+    elif a.probe_cat:
+        do_probe_cat(a.probe_cat, headful=a.headful)
+    elif a.crawl:
+        do_crawl(headful=a.headful, delay=a.delay, limit_cats=a.limit_cats)
     else:
         do_refresh(limit=a.limit, headful=a.headful, delay=a.delay)
 

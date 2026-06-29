@@ -14,7 +14,7 @@ $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $log   = Join-Path $logs "scrape_$stamp.log"
 
 "== Inicio: $(Get-Date) ==" | Tee-Object -FilePath $log
-& $py (Join-Path $here "scrape_intcomex.py") 2>&1 | Tee-Object -FilePath $log -Append
+& $py (Join-Path $here "scrape_intcomex.py") --crawl 2>&1 | Tee-Object -FilePath $log -Append
 $code = $LASTEXITCODE
 "== Fin scrape: $(Get-Date)  (exit $code) ==" | Tee-Object -FilePath $log -Append
 

@@ -8,7 +8,7 @@
 #
 # Para cambiar la hora, editá $Hora abajo (formato 24h, ej. "03:30").
 
-$Hora       = "06:00"
+$Hora       = "00:00"
 $NombreTarea = "EBS - Actualizar tienda Intcomex"
 
 $here   = Split-Path -Parent $MyInvocation.MyCommand.Path
