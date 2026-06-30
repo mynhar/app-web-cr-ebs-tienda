@@ -497,15 +497,28 @@ def do_crawl(headful=False, delay=0.4, max_pages=300, limit_cats=None):
             seen_cat = set()    # SKUs ya vistos en ESTA categoría
             for pg in range(1, max_pages + 1):
                 url = "%s/es-XCR/Products/ByCategory/%s?r=True&p=%d" % (BASE, code, pg)
-                page.goto(url, wait_until="domcontentloaded", timeout=45000)
-                if is_logged_out(page):
-                    sys.exit("La sesión expiró durante el recorrido. Volvé a correr (re-login automático).")
+                # Carga resistente a fallos: una página lenta NO debe abortar todo el
+                # crawl (perderíamos ~20 min y la corta ventana de sesión). Reintenta
+                # una vez ante un error transitorio; si persiste, omite la categoría.
                 try:
-                    page.wait_for_selector(".font-price, [data-productsku]", timeout=8000)
-                except Exception:
-                    pass
-                page.wait_for_timeout(300)
-                cards = parse_listing(page.content())
+                    try:
+                        page.goto(url, wait_until="domcontentloaded", timeout=45000)
+                    except Exception:
+                        page.wait_for_timeout(1500)
+                        page.goto(url, wait_until="domcontentloaded", timeout=45000)
+                    if is_logged_out(page):
+                        sys.exit("La sesión expiró durante el recorrido. Volvé a correr (re-login automático).")
+                    try:
+                        page.wait_for_selector(".font-price, [data-productsku]", timeout=8000)
+                    except Exception:
+                        pass
+                    page.wait_for_timeout(300)
+                    cards = parse_listing(page.content())
+                except SystemExit:
+                    raise
+                except Exception as e:
+                    print(f"    !! {code} pag {pg}: {type(e).__name__}: {str(e)[:140]} -- se omite y sigo")
+                    break
                 # Si la página no trae SKUs nuevos (vacía o Intcomex repitió la pág. 1),
                 # llegamos al final de la categoría.
                 nuevos = [c for c in cards if c["sku"] not in seen_cat]
