@@ -416,6 +416,86 @@ Si al re-loguear con --auto-login no alcanza (raro), probá el login manual una 
 
 
 
+/**********************************************************************************************
+/**********************************************************************************************
+***** Paso 1 — Renovar la sesión (login manual, una sola vez). En tu terminal: *****
+cd c:\mi-sitio-web\app-web-cr-ebs-tienda\scraper
+.\.venv\Scripts\python.exe scrape_intcomex.py --login
+
+/**********************************************************************************************
+Opción A — Proceso completo (refresca + publica)
+- Es exactamente lo que corre la tarea diaria: actualiza los 706 productos y hace commit + push de index.html a GitHub Pages.
+cd c:\mi-sitio-web\app-web-cr-ebs-tienda\scraper
+powershell -ExecutionPolicy Bypass -File .\run_scrape.ps1
+
+
+- Alternativa equivalente sin abrir terminal nueva, disparando la tarea programada:
+Start-ScheduledTask -TaskName "EBS - Actualizar tienda Intcomex"
+
+/**********************************************************************************************
+Opción B — Solo refrescar precios/stock (sin publicar)
+- Si querés ver la salida en pantalla y revisar antes de subir nada:
+
+cd c:\mi-sitio-web\app-web-cr-ebs-tienda\scraper
+.\.venv\Scripts\python.exe scrape_intcomex.py            # corrida completa, 706 productos
+- Y cuando estés conforme, publicás a mano:
+
+
+cd c:\mi-sitio-web\app-web-cr-ebs-tienda
+git add index.html && git commit -m "Actualizar precios y stock" && git push origin main
+
+
+- Antes de la corrida completa (opcional pero útil)
+cd c:\mi-sitio-web\app-web-cr-ebs-tienda\scraper
+
+# Prueba rápida con 5 productos, para confirmar que la sesión y los selectores funcionan
+.\.venv\Scripts\python.exe scrape_intcomex.py --limit 5
+
+# Validar un producto puntual (debe imprimir costo + stock, no None)
+.\.venv\Scripts\python.exe scrape_intcomex.py --probe 510852
+Si el log dice "La sesión expiró"
+La cookie de Intcomex caduca cada varias semanas. Se renueva una vez (login manual con captcha) y vuelve a quedar automático:
+
+
+cd c:\mi-sitio-web\app-web-cr-ebs-tienda\scraper
+.\.venv\Scripts\python.exe scrape_intcomex.py --login
+Iniciás sesión en el navegador que se abre, cerrás el inspector y listo.
+
+En corto: para "actualizar todos los productos desde Intcomex" a mano, lo normal es la Opción A (run_scrape.ps1). El comando que preguntaste antes (Set-ExecutionPolicy + Activate.ps1) es solo la preparación para la Opción B; con run_scrape.ps1 no hace falta porque ya usa el Python del .venv directamente.
+
+
+Tienda hecha en HTML/CSS/JS (estática).
+Todo en GitHub, fuente; despliegue automático vía GitHub Actions.
+Tarea programada en Python (Windows Task Scheduler). Se ejecuta en sistema operativo windows 10.
+- Actualiza los productos de la tienda.
+- Debe loguearce en la tienda, usando usuario y contraseña para poder leer los productos y actualizarlos, hay capcha. No es un API.
+- El proceso de loguearce y leer todos los productos tarda 30 minutos.
+- Actualiza los productos en index.html.
+- Actualiza github.
+- la tarea se ejecuta todos los dias a las 24:00 o media noche.
+
+
+Tu arquitectura actual → Azure
+Lo que tienes hoy---------------------------------------A dónde va en Azure
+Tienda en HTML/CSS/JS (estática)------------------------Azure Static Web Apps
+Tarea programada en Python (Windows Task Scheduler)-----Azure Functions con Timer Trigger
+Todo en GitHub------------------------------------------Se mantiene como fuente; despliegue automático vía GitHub Actions
+
+
+cd c:\mi-sitio-web\app-web-cr-ebs-tienda\scraper
+
+# 1) Login fresco (navegador + captcha). Logueate y cerrá el inspector.
+.\.venv\Scripts\python.exe scrape_intcomex.py --login
+
+# 2) INMEDIATAMENTE después, la corrida completa que publica:
+powershell -ExecutionPolicy Bypass -File .\run_scrape.ps1
+
+
+
+
+
+
+
 
 
 
