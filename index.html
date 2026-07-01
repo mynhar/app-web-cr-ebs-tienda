@@ -93,6 +93,10 @@ button{font-family:inherit;cursor:pointer}
 .mast-contact{font-size:var(--text-sm);color:#cdddf3;display:flex;align-items:center;gap:6px}
 .mast-contact a{color:#fff;border-bottom:1px solid rgba(255,255,255,.3)}
 .mast-contact a:hover{border-color:var(--color-accent)}
+.mast-fx{display:flex;align-items:center;gap:var(--space-8);font-size:var(--text-sm);color:#eaf1fb}
+.mast-fx .fx-label{white-space:nowrap;line-height:1}
+.mast-fx .fx-label b{color:#fff;font-weight:700}
+.cr-flag{width:24px;height:16px;flex:0 0 auto;border-radius:2px;box-shadow:0 0 0 1px rgba(255,255,255,.3);background:linear-gradient(to bottom,#002b7f 0 16.667%,#fff 16.667% 33.333%,#ce1126 33.333% 66.667%,#fff 66.667% 83.333%,#002b7f 83.333% 100%)}
 @media(max-width:680px){.partner span{display:none}.mast-right{gap:var(--space-12);width:100%}}
 
 /* ===== Hero ===== */
@@ -311,6 +315,10 @@ select.sel:focus{outline:none;border-color:var(--color-accent);box-shadow:0 0 0 
       </div>
     </div>
     <div class="mast-right">
+      <div class="mast-fx" title="Tipo de cambio de Intcomex">
+        <span class="cr-flag" role="img" aria-label="Bandera de Costa Rica"></span>
+        <span class="fx-label">TC&nbsp;₡<b id="fxHeader">457,17</b>&nbsp;/&nbsp;US$1</span>
+      </div>
       <div class="partner" title="Microsoft Partner">
         <span class="ms-squares" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
         <span>Microsoft Partner</span>
@@ -813,6 +821,8 @@ select.sel:focus{outline:none;border-color:var(--color-accent);box-shadow:0 0 0 
   }
 
   document.getElementById("fxnote").textContent = FX.toLocaleString("es-CR");
+  var fxHeaderEl = document.getElementById("fxHeader");
+  if (fxHeaderEl) fxHeaderEl.textContent = FX.toLocaleString("es-CR");
   applyFilters();
   renderCart();
 })();
