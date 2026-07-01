@@ -491,6 +491,33 @@ cd c:\mi-sitio-web\app-web-cr-ebs-tienda\scraper
 powershell -ExecutionPolicy Bypass -File .\run_scrape.ps1
 
 
+/**********************************************************************************************
+/**********************************************************************************************
+El comando que actualiza datos y publica al repositorio (GitHub Pages) es:
+cd scraper; powershell -ExecutionPolicy Bypass -File .\run_scrape.ps1
+
+
+/**********************************************************************************************
+Solo actualizar precios/stock sin publicar (no toca el repo):
+.\.venv\Scripts\python.exe scrape_intcomex.py --crawl
+
+
+/**********************************************************************************************
+Si la sesión expiró (el log dice sesión expirada, o todas las categorías muestran acumulado: 0 / TC 456.0) — renová sesión y corré el crawl inmediatamente después, back-to-back:
+cd c:\mi-sitio-web\app-web-cr-ebs-tienda\scraper
+.\.venv\Scripts\python.exe scrape_intcomex.py --login
+powershell -ExecutionPolicy Bypass -File .\run_scrape.ps1
+
+
+.\.venv\Scripts\python.exe scrape_intcomex.py --crawl
+
+
+
+
+
+
+
+
 
 
 
