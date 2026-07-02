@@ -512,6 +512,10 @@ powershell -ExecutionPolicy Bypass -File .\run_scrape.ps1
 .\.venv\Scripts\python.exe scrape_intcomex.py --crawl
 
 
+Poner en el encabezado (header) de la pagina.
+- El Tipo de Cambio
+- La bandera de costa rica. En pequeño, que no cambie el tamaño del encabezado.
+
 
 
 
